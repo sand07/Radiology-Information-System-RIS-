@@ -1,18 +1,22 @@
 <?php
 
-
+/**
+ * Konfigurasi Database untuk RIS
+ * Database: sikbackup2
+ * Driver: PDO MySQL
+ */
 
 // Konfigurasi Database
 define('DB_HOST', '');
-define('DB_USER', '');
+define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', '');
 define('DB_PORT', '3306');
 
 // Konfigurasi Orthanc PACS
-define('ORTHANC_URL', 'URL SERVER OTHANC');
-define('ORTHANC_USERNAME', 'USER');
-define('ORTHANC_PASSWORD', 'PW');
+define('ORTHANC_URL', '');
+define('ORTHANC_USERNAME', '');
+define('ORTHANC_PASSWORD', '');
 
 // Konfigurasi Enkripsi
 define('ENCRYPT_KEY_USER', '');

@@ -62,7 +62,7 @@ if ($db->isConnected()) {
                        INNER JOIN dokter d ON pr.kd_dokter = d.kd_dokter
                        INNER JOIN jns_perawatan_radiologi jpr ON pr.kd_jenis_prw = jpr.kd_jenis_prw
                        LEFT JOIN hasil_radiologi hr ON pr.no_rawat = hr.no_rawat AND pr.tgl_periksa = hr.tgl_periksa AND pr.jam = hr.jam
-                       LEFT JOIN permintaan_radiologi perr ON pr.no_rawat = perr.no_rawat AND pr.tgl_periksa = perr.tgl_hasil AND pr.jam = perr.jam_hasil
+                       INNER JOIN permintaan_radiologi perr ON pr.no_rawat = perr.no_rawat AND pr.tgl_periksa = perr.tgl_hasil AND pr.jam = perr.jam_hasil
                        " . $whereClause;
 
         $countResult = $db->fetch($countQuery, $params);
@@ -102,7 +102,7 @@ if ($db->isConnected()) {
         INNER JOIN dokter d ON pr.kd_dokter = d.kd_dokter
         INNER JOIN jns_perawatan_radiologi jpr ON pr.kd_jenis_prw = jpr.kd_jenis_prw
         LEFT JOIN hasil_radiologi hr ON pr.no_rawat = hr.no_rawat AND pr.tgl_periksa = hr.tgl_periksa AND pr.jam = hr.jam
-        LEFT JOIN permintaan_radiologi perr ON pr.no_rawat = perr.no_rawat AND pr.tgl_periksa = perr.tgl_hasil AND pr.jam = perr.jam_hasil
+        INNER JOIN permintaan_radiologi perr ON pr.no_rawat = perr.no_rawat AND pr.tgl_periksa = perr.tgl_hasil AND pr.jam = perr.jam_hasil
         " . $whereClause . "
         GROUP BY CONCAT(pr.no_rawat, pr.tgl_periksa, pr.jam)
         ORDER BY pr.tgl_periksa DESC, pr.jam DESC

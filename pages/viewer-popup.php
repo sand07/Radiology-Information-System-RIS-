@@ -933,12 +933,17 @@ function getStudyInstanceUIDWithValidation($studyId, $expectedAccessionNumber = 
             <div class="toolbar-info">
                 <div class="viewer-selector">
                     <label for="viewerTypeSelect" style="white-space: nowrap; color: #ccc;">Viewer:</label>
-                    <select id="viewerTypeSelect">
-                        <option value="ohif">OHIF Viewer</option>
-                        <option value="segmentation">OHIF Segmentation</option>
-                        <option value="hangingProtocol">OHIF Hanging Protocol</option>
-                        <option value="stone">Stone Viewer</option>
-                    </select>
+                    <div style="display: flex; gap: 5px;">
+                        <select id="viewerTypeSelect">
+                            <option value="ohif">OHIF Viewer</option>
+                            <option value="segmentation">OHIF Segmentation</option>
+                            <option value="hangingProtocol">OHIF Hanging Protocol</option>
+                            <option value="stone">Stone Viewer</option>
+                        </select>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnAnalisaAI" style="padding: 4px 8px; font-size: 11px;">
+                            <i class="fas fa-robot"></i> Analisa AI
+                        </button>
+                    </div>
                 </div>
                 <div style="white-space: nowrap;">
                     <?php echo formatTanggalTampil($exam['tgl_periksa']); ?> • <?php echo $exam['jam']; ?>
@@ -1070,6 +1075,36 @@ function getStudyInstanceUIDWithValidation($studyId, $expectedAccessionNumber = 
                     </button>
                     <button type="button" class="btn btn-primary" id="saveSignature">
                         <i class="fas fa-save"></i> Simpan TTD
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analysis Modal -->
+    <div class="modal fade" id="aiModal" tabindex="-1" aria-labelledby="aiModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiModalLabel"><i class="fas fa-robot"></i> Analisa AI</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="aiLoading" class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3">Sedang menganalisa gambar menggunakan AI...</p>
+                    </div>
+                    <div id="aiResult" style="display: none;">
+                        <div class="alert alert-info py-2 px-3 mb-3" style="font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> Hasil di bawah adalah bantuan AI. Harus ditelaah kembali oleh Radiolog.
+                        </div>
+                        <div id="aiTextContent" style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #ddd;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" id="btnCopyToExpertise">
+                        <i class="fas fa-copy"></i> Salin ke Expertise
                     </button>
                 </div>
             </div>
@@ -1491,6 +1526,96 @@ function getStudyInstanceUIDWithValidation($studyId, $expectedAccessionNumber = 
 
         // Initialize on page load
         initSignaturePad();
+
+        // AI Analysis Functionality
+        const btnAnalisaAI = document.getElementById('btnAnalisaAI');
+        const aiModal = new bootstrap.Modal(document.getElementById('aiModal'));
+        const aiLoading = document.getElementById('aiLoading');
+        const aiResult = document.getElementById('aiResult');
+        const aiTextContent = document.getElementById('aiTextContent');
+        const btnCopyToExpertise = document.getElementById('btnCopyToExpertise');
+
+        if (btnAnalisaAI) {
+            btnAnalisaAI.addEventListener('click', function() {
+                const studyUID = '<?php echo $studyInstanceUID; ?>';
+                
+                if (!studyUID) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Study UID tidak ditemukan. Pastikan gambar sedang aktif.',
+                        confirmButtonColor: '#4D7C0F'
+                    });
+                    return;
+                }
+
+                // Show modal and reset state
+                aiModal.show();
+                aiLoading.style.display = 'block';
+                aiResult.style.display = 'none';
+                aiTextContent.innerHTML = '';
+
+                // Call Backend API
+                fetch('../api/analyze-ai.php?studyInstanceUID=' + encodeURIComponent(studyUID))
+                .then(response => response.json())
+                .then(data => {
+                    aiLoading.style.display = 'none';
+                    if (data.success) {
+                        aiResult.style.display = 'block';
+                        aiTextContent.innerHTML = formatAiResponse(data.analysis);
+                    } else {
+                        aiModal.hide();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal Analisa',
+                            text: data.message || 'Terjadi kesalahan saat menghubungi API AI.',
+                            confirmButtonColor: '#4D7C0F'
+                        });
+                    }
+                })
+                .catch(err => {
+                    aiLoading.style.display = 'none';
+                    aiModal.hide();
+                    console.error(err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Gagal menghubungi server.',
+                        confirmButtonColor: '#4D7C0F'
+                    });
+                });
+            });
+        }
+
+        // Helper to format Markdown-like bold/list from Gemini if any
+        function formatAiResponse(text) {
+            // Very simple markdown replacement for bold
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                       .replace(/^\s*[\-\*]\s+/gm, '• ');
+        }
+
+        if (btnCopyToExpertise) {
+            btnCopyToExpertise.addEventListener('click', function() {
+                const aiText = aiTextContent.innerText;
+                const expertiseArea = document.getElementById('hasilTextarea');
+                
+                if (expertiseArea) {
+                    // Append or replace? Let's confirm with user usually, but here we append with space
+                    const currentVal = expertiseArea.value.trim();
+                    expertiseArea.value = (currentVal ? currentVal + "\n\n" : "") + "--- ANALISA AI ---\n" + aiText;
+                    expertiseArea.dispatchEvent(new Event('input')); // Update char count
+                    
+                    aiModal.hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Tersalin',
+                        text: 'Hasil analisa AI telah ditambahkan ke report expertise.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
